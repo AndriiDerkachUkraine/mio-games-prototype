@@ -22,10 +22,7 @@ export async function createTestApp(): Promise<TestContext> {
   return { app, db: app.get<Db>(DB) };
 }
 
-/**
- * Wipes all tenant data and re-seeds the two dev operators.
- * The default reward endpoint is deliberately unreachable; tests that need a casino start the mock and pass its URL.
- */
+/** Wipes tenant data and re-seeds both dev operators (reward URL unreachable by default). */
 export async function resetDatabase(db: Db, mockCasinoUrl = 'http://127.0.0.1:1'): Promise<void> {
   // TRUNCATE bypasses the row-level append-only trigger on ledger_entries by design.
   await sql`TRUNCATE redemption_events, redemptions, store_items, ledger_entries, wallets, spins, reward_tables,

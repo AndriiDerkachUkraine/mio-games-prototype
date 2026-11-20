@@ -1,4 +1,4 @@
-import type { ColumnType, Generated } from 'kysely';
+import type { ColumnType, Generated, Selectable } from 'kysely';
 
 // Hand-written to mirror migrations/*.sql. bigint columns are parsed to JS numbers
 // (see db.provider.ts): coin amounts are far below Number.MAX_SAFE_INTEGER.
@@ -161,3 +161,5 @@ export interface Database {
   redemptions: RedemptionsTable;
   redemption_events: RedemptionEventsTable;
 }
+
+export type Tenant = Selectable<TenantsTable>;

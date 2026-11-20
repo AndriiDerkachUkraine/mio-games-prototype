@@ -6,16 +6,17 @@ import type { Db } from './db.provider';
 const MIGRATION_LOCK_ID = 7041977;
 
 /**
- * Minimal forward-only migrator over plain .sql files.
- * All pending files run in one transaction (all-or-nothing) under an advisory lock,
- * so concurrently starting containers cannot apply the same migration twice.
+ * Forward-only migrator over plain .sql files. Pending files run in one transaction under an advisory lock,
+ * so concurrently starting containers cannot apply a migration twice.
  */
 export async function migrate(db: Db, migrationsDir: string): Promise<string[]> {
   return db.transaction().execute(async (tx) => {
     await sql`SELECT pg_advisory_xact_lock(${MIGRATION_LOCK_ID})`.execute(tx);
-    await sql`CREATE TABLE IF NOT EXISTS schema_migrations (name text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now())`.execute(
-      tx,
-    );
+    await sql`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        name       text PRIMARY KEY,
+        applied_at timestamptz NOT NULL DEFAULT now()
+      )`.execute(tx);
     const { rows } = await sql<{ name: string }>`SELECT name FROM schema_migrations`.execute(tx);
     const applied = new Set(rows.map((r) => r.name));
     const pending = readdirSync(migrationsDir)

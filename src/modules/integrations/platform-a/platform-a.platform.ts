@@ -1,0 +1,81 @@
+import { z } from 'zod';
+import type {
+  CasinoPlatform,
+  DepositStatus,
+  FreshnessPolicy,
+  InboundParseResult,
+  InboundRequest,
+} from '../casino-platform';
+import { invalidEvent, unauthorizedEvent } from '../inbound-errors';
+import { assertFresh, constantTimeEquals, hmacSha256, singleHeader } from '../signatures';
+import { CurrencyCode, ExternalId } from '../wire-schemas';
+
+/*
+ * Platform A (simulated):
+ *   X-Timestamp: <unix s>, X-Signature: sha256=<hex HMAC(secret, "<timestamp>.<raw body>")>
+ *   { event_id, event_type: "deposit", player_id, amount_cents, currency, status: SUCCESS|FAILED|PENDING }
+ */
+
+const SIGNATURE_HEADER = 'x-signature';
+const TIMESTAMP_HEADER = 'x-timestamp';
+
+const EnvelopeSchema = z.object({ event_id: ExternalId, event_type: z.string().min(1) });
+
+const DepositSchema = EnvelopeSchema.extend({
+  event_type: z.literal('deposit'),
+  player_id: ExternalId,
+  amount_cents: z.number().int().positive(),
+  currency: CurrencyCode,
+  status: z.enum(['SUCCESS', 'FAILED', 'PENDING']),
+});
+
+const STATUS: Record<z.infer<typeof DepositSchema>['status'], DepositStatus> = {
+  SUCCESS: 'SUCCEEDED',
+  FAILED: 'FAILED',
+  PENDING: 'PENDING',
+};
+
+const signature = (secret: string, timestamp: string, rawBody: string): string =>
+  `sha256=${hmacSha256(secret, `${timestamp}.${rawBody}`).toString('hex')}`;
+
+/** Signs a request exactly as Casino A does. */
+export function signPlatformA(rawBody: string, secret: string, timestampSeconds: number): Record<string, string> {
+  const timestamp = String(timestampSeconds);
+  return { [TIMESTAMP_HEADER]: timestamp, [SIGNATURE_HEADER]: signature(secret, timestamp, rawBody) };
+}
+
+export class PlatformA implements CasinoPlatform {
+  readonly key = 'platform-a';
+
+  verifyInbound(request: InboundRequest, webhookSecret: string, freshness: FreshnessPolicy): void {
+    const timestamp = singleHeader(request.headers, TIMESTAMP_HEADER);
+    const provided = singleHeader(request.headers, SIGNATURE_HEADER);
+    if (!timestamp || !provided) throw unauthorizedEvent('missing signature headers');
+
+    const expected = signature(webhookSecret, timestamp, request.rawBody.toString('utf8'));
+    if (!constantTimeEquals(provided, expected)) throw unauthorizedEvent('invalid signature');
+    assertFresh(/^\d+$/.test(timestamp) ? Number(timestamp) : NaN, freshness);
+  }
+
+  parseInbound(body: unknown): InboundParseResult {
+    const envelope = EnvelopeSchema.safeParse(body);
+    if (!envelope.success) throw invalidEvent(envelope.error);
+    if (envelope.data.event_type !== 'deposit') {
+      return { kind: 'unsupported', externalEventId: envelope.data.event_id, eventType: envelope.data.event_type };
+    }
+
+    const deposit = DepositSchema.safeParse(body);
+    if (!deposit.success) throw invalidEvent(deposit.error);
+    const d = deposit.data;
+    return {
+      kind: 'deposit',
+      event: {
+        externalEventId: d.event_id,
+        externalPlayerId: d.player_id,
+        amountMinor: d.amount_cents,
+        currency: d.currency,
+        status: STATUS[d.status],
+      },
+    };
+  }
+}

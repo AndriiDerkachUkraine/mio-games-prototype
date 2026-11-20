@@ -4,10 +4,7 @@ import type { RewardDescriptor, RewardSegment } from './schema';
 
 const sha256Hex = (value: string): string => createHash('sha256').update(value).digest('hex');
 
-/**
- * Development credentials for the two simulated operators.
- * They are intentionally public: the mock casino and the sample requests use them.
- */
+/** Dev-only credentials of the two simulated operators, public on purpose. */
 export const DEV_TENANTS = {
   'casino-a': {
     name: 'Casino A (Platform A integration)',

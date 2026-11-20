@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect, type Transaction } from 'kysely';
 import { Pool, types } from 'pg';
 import type { Database } from './schema';
 
@@ -7,6 +7,7 @@ types.setTypeParser(types.builtins.INT8, (value) => Number(value));
 
 export const DB = Symbol('DB');
 export type Db = Kysely<Database>;
+export type Tx = Transaction<Database>;
 
 export function createDb(connectionString: string, maxConnections = 10): Db {
   return new Kysely<Database>({

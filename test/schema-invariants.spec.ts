@@ -1,5 +1,6 @@
 import { createDb, type Db } from '../src/db/db.provider';
 import { seed } from '../src/db/seed';
+import { countRows } from './support/db';
 import { TEST_DATABASE_URL } from './support/env';
 import { resetDatabase } from './support/test-app';
 
@@ -115,16 +116,13 @@ describe('Schema-level invariants', () => {
 
   it('seeding is idempotent', async () => {
     await seed(db, { mockCasinoUrl: 'http://127.0.0.1:1' });
-    const countRows = async (table: 'tenants' | 'gamification_rules' | 'reward_tables' | 'store_items') =>
-      (
-        await db
-          .selectFrom(table)
-          .select((eb) => eb.fn.countAll<number>().as('n'))
-          .executeTakeFirstOrThrow()
-      ).n;
-    expect(await countRows('tenants')).toBe(2);
-    expect(await countRows('gamification_rules')).toBe(2);
-    expect(await countRows('reward_tables')).toBe(2);
-    expect(await countRows('store_items')).toBe(4);
+    const tenants = await db.selectFrom('tenants').select(['id', 'platform']).orderBy('id').execute();
+    expect(tenants).toEqual([
+      { id: 'casino-a', platform: 'platform-a' },
+      { id: 'casino-b', platform: 'platform-b' },
+    ]);
+    expect(await countRows(db, 'gamification_rules')).toBe(2);
+    expect(await countRows(db, 'reward_tables')).toBe(2);
+    expect(await countRows(db, 'store_items')).toBe(4);
   });
 });

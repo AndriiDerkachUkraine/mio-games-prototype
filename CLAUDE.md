@@ -28,9 +28,9 @@ These are the reason this codebase exists. Never weaken them, and never "fix" a 
 - Modular monolith (NestJS). Modules: `tenancy`, `integrations`, `ingestion`, `players`, `rules`, `wheel`,
   `ledger`, `store`, `redemption`, `admin`.
 - **All casino-specific shapes live in `src/modules/integrations/<platform>/`.** Core modules only see
-  `NormalizedEvent`, `RewardDescriptor` and `IssueResult`. Adding a casino = adding an adapter + registering it.
+  `InboundParseResult` (normalized events), `RewardDescriptor` and `IssueResult`. Adding a casino = adding an adapter + registering it.
 - Money-moving code runs inside one DB transaction and relies on DB constraints, not on read-then-write checks.
-- Domain errors extend `DomainError` and are mapped to HTTP by one exception filter; controllers stay thin.
+- Expected failures are `DomainError`s with a stable code, mapped to HTTP by one exception filter; controllers stay thin.
 
 ## Testing rules
 

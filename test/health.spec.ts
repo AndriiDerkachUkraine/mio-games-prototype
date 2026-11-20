@@ -1,12 +1,11 @@
 import request from 'supertest';
-import { createTestApp, resetDatabase, type TestContext } from './support/test-app';
+import { createTestApp, type TestContext } from './support/test-app';
 
-describe('Health', () => {
+describe('Health and correlation id', () => {
   let ctx: TestContext;
 
   beforeAll(async () => {
     ctx = await createTestApp();
-    await resetDatabase(ctx.db);
   });
   afterAll(() => ctx.app.close());
 
@@ -15,11 +14,18 @@ describe('Health', () => {
     expect(res.body).toEqual({ status: 'ok' });
   });
 
-  it('seeds both simulated operators', async () => {
-    const tenants = await ctx.db.selectFrom('tenants').select(['id', 'platform']).orderBy('id').execute();
-    expect(tenants).toEqual([
-      { id: 'casino-a', platform: 'platform-a' },
-      { id: 'casino-b', platform: 'platform-b' },
-    ]);
+  it('echoes a well-formed X-Request-Id', async () => {
+    const res = await request(ctx.app.getHttpServer()).get('/health').set('x-request-id', 'casino-a.req-42');
+    expect(res.headers['x-request-id']).toBe('casino-a.req-42');
+  });
+
+  it.each([['with spaces'], ['x'.repeat(129)], ['<script>']])('replaces a malformed X-Request-Id (%#)', async (id) => {
+    const res = await request(ctx.app.getHttpServer()).get('/health').set('x-request-id', id);
+    expect(res.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  it('generates an id when none is sent', async () => {
+    const res = await request(ctx.app.getHttpServer()).get('/health');
+    expect(res.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
   });
 });

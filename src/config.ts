@@ -4,6 +4,8 @@ const ConfigSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3100),
   DATABASE_URL: z.string().min(1),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
+  /** Max allowed skew between a webhook's signed timestamp and server time (replay protection). */
+  WEBHOOK_TOLERANCE_SECONDS: z.coerce.number().int().positive().default(300),
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;
