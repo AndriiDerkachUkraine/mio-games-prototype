@@ -1,6 +1,6 @@
 import { HttpStatus } from '@nestjs/common';
 
-/** Expected failure with a stable error code; mapped to HTTP only by DomainErrorFilter. */
+/** Expected failure with a stable error code; mapped to HTTP only by ApiExceptionFilter. */
 export class DomainError extends Error {
   constructor(
     readonly status: HttpStatus,

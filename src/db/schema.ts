@@ -3,15 +3,10 @@ import type { ColumnType, Generated, Selectable } from 'kysely';
 // Hand-written to mirror migrations/*.sql. bigint columns are parsed to JS numbers
 // (see db.provider.ts): coin amounts are far below Number.MAX_SAFE_INTEGER.
 
-type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
+/** timestamptz with a DB default: optional on insert, always a Date when read. */
+type DefaultedTimestamp = ColumnType<Date, Date | string | undefined, Date | string>;
+type NullableTimestamp = ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
 type Json<T> = ColumnType<T, string, string>;
-
-export interface RewardSegment {
-  key: string;
-  label: string;
-  coins: number;
-  weight: number;
-}
 
 /** Internal, platform-agnostic reward descriptor. Casino adapters translate it to their API. */
 export type RewardDescriptor =
@@ -32,14 +27,14 @@ export interface TenantsTable {
   reward_api_key: string;
   reward_api_timeout_ms: Generated<number>;
   status: Generated<'ACTIVE' | 'SUSPENDED'>;
-  created_at: Generated<Timestamp>;
+  created_at: DefaultedTimestamp;
 }
 
 export interface PlayersTable {
   id: Generated<string>;
   tenant_id: string;
   external_player_id: string;
-  created_at: Generated<Timestamp>;
+  created_at: DefaultedTimestamp;
 }
 
 export interface InboundEventsTable {
@@ -51,7 +46,7 @@ export interface InboundEventsTable {
   ignore_reason: string | null;
   player_id: string | null;
   payload: Json<unknown>;
-  received_at: Generated<Timestamp>;
+  received_at: DefaultedTimestamp;
 }
 
 export interface GamificationRulesTable {
@@ -62,17 +57,17 @@ export interface GamificationRulesTable {
   min_amount_minor: Generated<number>;
   spins_granted: number;
   active: Generated<boolean>;
-  created_at: Generated<Timestamp>;
+  created_at: DefaultedTimestamp;
 }
 
 export interface RewardTablesTable {
   id: Generated<string>;
   tenant_id: string;
   version: number;
-  segments: Json<RewardSegment[]>;
+  segments: Json<unknown>; // validated on read (RewardSegmentsSchema)
   active: Generated<boolean>;
   created_by: string;
-  created_at: Generated<Timestamp>;
+  created_at: DefaultedTimestamp;
 }
 
 export interface SpinsTable {
@@ -85,15 +80,15 @@ export interface SpinsTable {
   reward_table_id: string | null;
   result_segment_key: string | null;
   result_coins: number | null;
-  granted_at: Generated<Timestamp>;
-  used_at: Timestamp | null;
+  granted_at: DefaultedTimestamp;
+  used_at: NullableTimestamp;
 }
 
 export interface WalletsTable {
   player_id: string;
   tenant_id: string;
   balance: Generated<number>;
-  updated_at: Generated<Timestamp>;
+  updated_at: DefaultedTimestamp;
 }
 
 export interface LedgerEntriesTable {
@@ -105,7 +100,7 @@ export interface LedgerEntriesTable {
   kind: LedgerEntryKind;
   reference_id: string;
   idempotency_key: string;
-  created_at: Generated<Timestamp>;
+  created_at: DefaultedTimestamp;
 }
 
 export interface StoreItemsTable {
@@ -116,7 +111,7 @@ export interface StoreItemsTable {
   price_coins: number;
   reward: Json<RewardDescriptor>;
   active: Generated<boolean>;
-  created_at: Generated<Timestamp>;
+  created_at: DefaultedTimestamp;
 }
 
 export interface RedemptionsTable {
@@ -131,11 +126,11 @@ export interface RedemptionsTable {
   external_reference: string | null;
   failure_reason: string | null;
   attempts: Generated<number>;
-  next_attempt_at: Generated<Timestamp>;
+  next_attempt_at: DefaultedTimestamp;
   lease_token: string | null;
-  lease_expires_at: Timestamp | null;
-  created_at: Generated<Timestamp>;
-  updated_at: Generated<Timestamp>;
+  lease_expires_at: NullableTimestamp;
+  created_at: DefaultedTimestamp;
+  updated_at: DefaultedTimestamp;
 }
 
 export interface RedemptionEventsTable {
@@ -145,7 +140,7 @@ export interface RedemptionEventsTable {
   from_status: string | null;
   to_status: string;
   detail: string | null;
-  created_at: Generated<Timestamp>;
+  created_at: DefaultedTimestamp;
 }
 
 export interface Database {

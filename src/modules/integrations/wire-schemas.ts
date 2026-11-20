@@ -1,8 +1,6 @@
 import { z } from 'zod';
 import { decimalToMinorUnits } from './money';
 
-export const ExternalId = z.string().min(1).max(128);
-
 export const CurrencyCode = z.string().regex(/^[A-Z]{3}$/, 'must be an ISO 4217 code');
 
 /** "50.00" → 5000 (positive integer minor units). */

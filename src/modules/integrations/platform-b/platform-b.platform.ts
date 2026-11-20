@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { constantTimeEquals, hmacSha256 } from '../../../common/crypto';
+import { ExternalId } from '../../../common/external-id';
 import type {
   CasinoPlatform,
   DepositStatus,
@@ -7,8 +9,8 @@ import type {
   InboundRequest,
 } from '../casino-platform';
 import { invalidEvent, unauthorizedEvent } from '../inbound-errors';
-import { assertFresh, constantTimeEquals, hmacSha256, singleHeader } from '../signatures';
-import { CurrencyCode, ExternalId, PositiveDecimalAmount } from '../wire-schemas';
+import { assertFresh, singleHeader } from '../signatures';
+import { CurrencyCode, PositiveDecimalAmount } from '../wire-schemas';
 
 /*
  * Platform B (simulated), deliberately unlike Platform A:

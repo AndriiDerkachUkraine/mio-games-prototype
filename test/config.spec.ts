@@ -1,18 +1,25 @@
 import { loadConfig } from '../src/config';
 
 describe('loadConfig', () => {
+  const required = { DATABASE_URL: 'postgres://x', SPIN_SEED_SECRET: 's'.repeat(32) };
+
   it('applies defaults', () => {
-    expect(loadConfig({ DATABASE_URL: 'postgres://x' })).toEqual({
+    expect(loadConfig(required)).toEqual({
+      ...required,
       PORT: 3100,
-      DATABASE_URL: 'postgres://x',
       LOG_LEVEL: 'info',
       WEBHOOK_TOLERANCE_SECONDS: 300,
+      PLAYER_TOKEN_MAX_AGE_SECONDS: 3600,
     });
   });
 
   it('fails fast and names every invalid variable', () => {
     expect(() => loadConfig({ PORT: 'abc', LOG_LEVEL: 'loud' })).toThrow(
-      /Invalid configuration: PORT: .*; DATABASE_URL: .*; LOG_LEVEL: /,
+      /Invalid configuration: PORT: .*; DATABASE_URL: .*; LOG_LEVEL: .*; SPIN_SEED_SECRET: /,
     );
+  });
+
+  it('rejects a guessable spin secret', () => {
+    expect(() => loadConfig({ ...required, SPIN_SEED_SECRET: 'short' })).toThrow(/SPIN_SEED_SECRET/);
   });
 });

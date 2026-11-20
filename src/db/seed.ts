@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
+import type { RewardSegment } from '../modules/wheel/reward-segments';
 import type { Db } from './db.provider';
-import type { RewardDescriptor, RewardSegment } from './schema';
+import type { RewardDescriptor } from './schema';
 
 const sha256Hex = (value: string): string => createHash('sha256').update(value).digest('hex');
 
@@ -26,9 +27,9 @@ export const DEV_TENANTS = {
   },
 } as const;
 
-type DevTenantId = keyof typeof DEV_TENANTS;
+export type DevTenantId = keyof typeof DEV_TENANTS;
 
-const DEFAULT_SEGMENTS: RewardSegment[] = [
+export const DEFAULT_SEGMENTS: RewardSegment[] = [
   { key: 'coins-10', label: '10 coins', coins: 10, weight: 50 },
   { key: 'coins-25', label: '25 coins', coins: 25, weight: 30 },
   { key: 'coins-50', label: '50 coins', coins: 50, weight: 15 },

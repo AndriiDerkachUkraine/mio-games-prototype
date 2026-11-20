@@ -38,6 +38,7 @@ services:
       PORT: 3100
       DATABASE_URL: postgres://mio:mio@postgres:5432/mio
       LOG_LEVEL: info
+      SPIN_SEED_SECRET: local-dev-spin-seed-secret-change-me-0123
     ports:
       - '3100:3100'
     depends_on:

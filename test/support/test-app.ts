@@ -13,9 +13,15 @@ export interface TestContext {
   db: Db;
 }
 
+export const TEST_SPIN_SEED_SECRET = 'test-spin-seed-secret-0123456789abcdef';
+
 /** Boots the real application against the real test database. */
 export async function createTestApp(): Promise<TestContext> {
-  const config = loadConfig({ DATABASE_URL: TEST_DATABASE_URL, LOG_LEVEL: 'silent' });
+  const config = loadConfig({
+    DATABASE_URL: TEST_DATABASE_URL,
+    LOG_LEVEL: 'silent',
+    SPIN_SEED_SECRET: TEST_SPIN_SEED_SECRET,
+  });
   const moduleRef = await Test.createTestingModule({ imports: [AppModule.forRoot(config)] }).compile();
   const app = moduleRef.createNestApplication({ rawBody: true, logger: false });
   await app.init();

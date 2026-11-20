@@ -2,12 +2,14 @@ import { randomUUID } from 'node:crypto';
 import { DynamicModule, Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
-import { DomainErrorFilter } from './common/domain-error.filter';
+import { ApiExceptionFilter } from './common/api-exception.filter';
 import type { AppConfig } from './config';
 import { ConfigModule } from './config.module';
 import { DbModule } from './db/db.module';
 import { HealthController } from './health.controller';
 import { IngestionModule } from './modules/ingestion/ingestion.module';
+import { LedgerModule } from './modules/ledger/ledger.module';
+import { WheelModule } from './modules/wheel/wheel.module';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
 
@@ -36,9 +38,11 @@ export class AppModule {
         }),
         DbModule,
         IngestionModule,
+        WheelModule,
+        LedgerModule,
       ],
       controllers: [HealthController],
-      providers: [{ provide: APP_FILTER, useClass: DomainErrorFilter }],
+      providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],
     };
   }
 }

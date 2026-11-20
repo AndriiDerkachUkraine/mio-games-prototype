@@ -30,12 +30,16 @@ These are the reason this codebase exists. Never weaken them, and never "fix" a 
 - **All casino-specific shapes live in `src/modules/integrations/<platform>/`.** Core modules only see
   `InboundParseResult` (normalized events), `RewardDescriptor` and `IssueResult`. Adding a casino = adding an adapter + registering it.
 - Money-moving code runs inside one DB transaction and relies on DB constraints, not on read-then-write checks.
+- Do not take row locks you do not need on hot paths. A no-op `ON CONFLICT DO UPDATE` locks the row exclusively and
+  deadlocked against FK checks of concurrent ledger inserts; resolve existing rows with a plain `SELECT` first.
 - Expected failures are `DomainError`s with a stable code, mapped to HTTP by one exception filter; controllers stay thin.
 
 ## Testing rules
 
 - Tests hit the **real Postgres** (`mio_test` database). Never mock the database: the guarantees under test live there.
 - Every reliability scenario from Part C has a named test. Concurrency is tested with real parallel requests.
+- Prove a guarantee's test is not vacuous: break the guarantee in code (mutation), see the test fail, restore.
+  A mutation must still compile (`noUnusedLocals`), otherwise "0 tests" proves nothing.
 - External casinos are the in-process mock (`src/mock-casino`) driven through its `/__control` endpoint.
 - Run scoped: `npx jest --runInBand test/<file>.spec.ts`. Full suite: `npm test`.
 

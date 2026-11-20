@@ -11,7 +11,7 @@ export class HealthController {
     try {
       await sql`SELECT 1`.execute(this.db);
     } catch {
-      throw new ServiceUnavailableException({ status: 'error', reason: 'database unreachable' });
+      throw new ServiceUnavailableException('database unreachable');
     }
     return { status: 'ok' };
   }

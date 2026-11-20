@@ -1,5 +1,5 @@
 import { DEV_TENANTS } from '../src/db/seed';
-import { hmacSha256 } from '../src/modules/integrations/signatures';
+import { hmacSha256 } from '../src/common/crypto';
 import { countRows } from './support/db';
 import { createTestApp, resetDatabase, type TestContext } from './support/test-app';
 import { nowSeconds, platformADeposit, platformBDeposit, sendPlatformA, sendPlatformB } from './support/webhooks';
