@@ -28,7 +28,7 @@ These are the reason this codebase exists. Never weaken them, and never "fix" a 
 - Modular monolith (NestJS). Modules: `tenancy`, `integrations`, `ingestion`, `players`, `rules`, `wheel`,
   `ledger`, `store`, `redemption`, `admin`.
 - **All casino-specific shapes live in `src/modules/integrations/<platform>/`.** Core modules only see
-  `InboundParseResult` (normalized events), `RewardDescriptor` and `IssueResult`. Adding a casino = adding an adapter + registering it.
+  `InboundParseResult` (normalized events), `RewardDescriptor` and `RewardOutcome`. Adding a casino = adding an adapter + registering it.
 - Money-moving code runs inside one DB transaction and relies on DB constraints, not on read-then-write checks.
 - Do not take row locks you do not need on hot paths. A no-op `ON CONFLICT DO UPDATE` locks the row exclusively and
   deadlocked against FK checks of concurrent ledger inserts; resolve existing rows with a plain `SELECT` first.
