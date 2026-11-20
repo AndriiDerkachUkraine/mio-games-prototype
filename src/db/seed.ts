@@ -1,5 +1,5 @@
 import { sha256Hex } from '../common/crypto';
-import type { NewStoreItem } from '../modules/store/store-items.repository';
+import { insertStoreItem, type NewStoreItem } from '../modules/store/store-items.repository';
 import type { RewardSegment } from '../modules/wheel/reward-segments';
 import type { Db } from './db.provider';
 
@@ -125,19 +125,7 @@ export async function seed(db: Db, opts: { mockCasinoUrl: string; rewardApiTimeo
           .execute();
       }
 
-      for (const item of STORE_ITEMS[tenantId]) {
-        await tx
-          .insertInto('store_items')
-          .values({
-            tenant_id: tenantId,
-            sku: item.sku,
-            name: item.name,
-            price_coins: item.priceCoins,
-            reward: JSON.stringify(item.reward),
-          })
-          .onConflict((oc) => oc.columns(['tenant_id', 'sku']).doNothing())
-          .execute();
-      }
+      for (const item of STORE_ITEMS[tenantId]) await insertStoreItem(tx, tenantId, item);
     }
   });
 }

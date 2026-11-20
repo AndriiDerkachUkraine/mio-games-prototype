@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // End-to-end demo against the compose stack (`docker compose up --build`), using plain HTTP only.
-// Walks the assignment's steps 1–8 for both casinos, then the reliability scenarios. Exits non-zero on any surprise.
+// Walks the assignment's steps 1–8 for both casinos, then the reliability scenarios.
+// Exits non-zero on any surprise, so it doubles as a smoke test.
 
 const MIO = process.env.MIO_URL ?? 'http://localhost:3100';
 const CASINO = process.env.CASINO_URL ?? 'http://localhost:4100';
@@ -166,15 +167,19 @@ async function reliability() {
   );
 }
 
+const abort = (reason) => {
+  console.error(`\n✗ demo aborted: ${reason}\n  Is the stack up? docker compose up --build`);
+  process.exit(1);
+};
+
 try {
   const health = await http(MIO, 'GET', '/health');
-  if (health.status !== 200) throw new Error(`MIO is not healthy at ${MIO}`);
+  if (health.status !== 200) abort(`MIO is not healthy at ${MIO}`);
   await happyPath('casino-a');
   await happyPath('casino-b');
   await reliability();
 } catch (err) {
-  console.error(`\n✗ demo aborted: ${err.message}\n  Is the stack up? docker compose up --build`);
-  process.exit(1);
+  abort(err.message);
 }
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) failed.`);
 process.exit(failures === 0 ? 0 : 1);

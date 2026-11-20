@@ -187,3 +187,18 @@ Translated from Ukrainian and shortened; the developer's own words, not paraphra
 - **Not changed, with reason.** Exported types used only in their own file are part of public method signatures;
   the remaining uncovered lines are defensive branches (a guard used without its decorator, a database outage
   during claiming).
+- **System-level checks after the review** (scripts kept outside the repository):
+  - _Load with failures:_ 30 players across both casinos at once — every deposit delivered twice, every spin played
+    three times in parallel, every redemption sent twice with its key — while the mock casinos timed out, returned
+    500s, lost responses and refused. No 5xx from MIO. A database audit afterwards found no wallet whose balance
+    differs from the sum of its ledger entries, no spin credited other than exactly once, no redemption debited
+    other than exactly once, refunds only on `FAILED` and exactly one each, and — checked against the casinos —
+    no `ISSUED` redemption without a delivered grant and no refunded redemption the casino had delivered.
+  - _Hard crash:_ the API container was killed with `SIGKILL` while six deliveries were leased and one casino call
+    was in flight. After restart the leases expired, the jobs were re-claimed and retried with the same
+    references: all six `ISSUED`, one grant each at the casino, no duplicates. No error-level log line in the run.
+  - _Two replicas, one queue:_ a second API container with its own worker joined the same database; 60 redemptions
+    under casino failures were split between them (25 and 93 attempts). No attempt was ever recorded twice for one
+    redemption, no lease was lost, and the money and casino audits stayed clean.
+  - The duplicate scan, re-run without dependency-injection boilerplate, found the store-item insert written twice
+    (seed and repository); both now use one `insertStoreItem`.

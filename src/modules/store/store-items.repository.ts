@@ -38,18 +38,7 @@ export class StoreItemsRepository {
   }
 
   async create(tenantId: string, item: NewStoreItem): Promise<ManagedStoreItem> {
-    const row = await this.db
-      .insertInto('store_items')
-      .values({
-        tenant_id: tenantId,
-        sku: item.sku,
-        name: item.name,
-        price_coins: item.priceCoins,
-        reward: JSON.stringify(item.reward),
-      })
-      .onConflict((oc) => oc.columns(['tenant_id', 'sku']).doNothing())
-      .returning(COLUMNS)
-      .executeTakeFirst();
+    const row = await insertStoreItem(this.db, tenantId, item);
     if (!row) throw new DomainError(HttpStatus.CONFLICT, 'SKU_TAKEN', `sku "${item.sku}" already exists`);
     return toManagedItem(row);
   }
@@ -72,6 +61,22 @@ export class StoreItemsRepository {
 }
 
 type Row = Pick<Selectable<StoreItemsTable>, (typeof COLUMNS)[number]>;
+
+/** Inserts unless the tenant already has this sku (then undefined). Also used by the seed, inside its transaction. */
+export function insertStoreItem(db: Db, tenantId: string, item: NewStoreItem): Promise<Row | undefined> {
+  return db
+    .insertInto('store_items')
+    .values({
+      tenant_id: tenantId,
+      sku: item.sku,
+      name: item.name,
+      price_coins: item.priceCoins,
+      reward: JSON.stringify(item.reward),
+    })
+    .onConflict((oc) => oc.columns(['tenant_id', 'sku']).doNothing())
+    .returning(COLUMNS)
+    .executeTakeFirst();
+}
 
 const toItem = (row: Row): StoreItem => ({
   itemId: row.id,
