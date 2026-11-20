@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { formatIssues } from './common/validation';
 
 const ConfigSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3100),
@@ -31,8 +32,7 @@ export const APP_CONFIG = Symbol('APP_CONFIG');
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const parsed = ConfigSchema.safeParse(env);
   if (!parsed.success) {
-    const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
-    throw new Error(`Invalid configuration: ${issues}`);
+    throw new Error(`Invalid configuration: ${formatIssues(parsed.error)}`);
   }
   return parsed.data;
 }

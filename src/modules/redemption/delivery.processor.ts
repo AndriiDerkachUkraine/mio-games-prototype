@@ -9,6 +9,7 @@ import { RewardDescriptorSchema } from '../store/reward-descriptor';
 import { TenantsRepository } from '../tenancy/tenants.repository';
 import { decide, retryDelayMs, type InFlightStatus, type Transition } from './delivery-decision';
 import { RedemptionsRepository, type DeliveryJob } from './redemptions.repository';
+import { refundRedemption } from './refund';
 
 /** One delivery attempt for one leased job: call the casino (outside any DB transaction), then record the outcome. */
 @Injectable()
@@ -66,13 +67,11 @@ export class DeliveryProcessor {
       );
       if (!owned) return false;
       if (t.status === 'FAILED') {
-        await this.ledger.post(tx, {
+        await refundRedemption(this.ledger, tx, {
+          id: job.id,
           tenantId: job.tenant_id,
           playerId: job.player_id,
-          amount: job.price_coins,
-          kind: 'REDEMPTION_REFUND',
-          referenceId: job.id,
-          idempotencyKey: `redemption:${job.id}:refund`,
+          priceCoins: job.price_coins,
         });
       }
       await this.redemptions.addEvent(tx, {

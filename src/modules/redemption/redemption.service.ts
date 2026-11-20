@@ -1,6 +1,7 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { DomainError } from '../../common/domain-error';
+import { Uuid } from '../../common/schemas';
 import { DB, type Db } from '../../db/db.provider';
 import { LedgerService } from '../ledger/ledger.service';
 import type { AuthenticatedPlayer } from '../players/player-auth.guard';
@@ -22,7 +23,6 @@ export interface RedemptionView {
 }
 
 const IdempotencyKey = z.string().regex(/^[\x21-\x7e]{1,128}$/, 'must be 1-128 printable ASCII characters');
-const Uuid = z.uuid();
 
 const itemNotFound = () => new DomainError(HttpStatus.NOT_FOUND, 'ITEM_NOT_FOUND', 'store item not found');
 const redemptionNotFound = () => new DomainError(HttpStatus.NOT_FOUND, 'REDEMPTION_NOT_FOUND', 'redemption not found');

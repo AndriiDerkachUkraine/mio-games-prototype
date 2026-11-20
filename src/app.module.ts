@@ -7,6 +7,7 @@ import type { AppConfig } from './config';
 import { ConfigModule } from './config.module';
 import { DbModule } from './db/db.module';
 import { HealthController } from './health.controller';
+import { AdminModule } from './modules/admin/admin.module';
 import { IngestionModule } from './modules/ingestion/ingestion.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
 import { RedemptionModule } from './modules/redemption/redemption.module';
@@ -44,6 +45,7 @@ export class AppModule {
         LedgerModule,
         StoreModule,
         RedemptionModule,
+        AdminModule,
       ],
       controllers: [HealthController],
       providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],

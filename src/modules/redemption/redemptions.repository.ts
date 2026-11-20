@@ -109,6 +109,56 @@ export class RedemptionsRepository {
     return row !== undefined;
   }
 
+  /** Admin view across the tenant's players, newest first. */
+  listForTenant(
+    tenantId: string,
+    status: RedemptionStatus,
+  ): Promise<(RedemptionRow & { external_player_id: string })[]> {
+    return this.db
+      .selectFrom('redemptions')
+      .innerJoin('players', 'players.id', 'redemptions.player_id')
+      .selectAll('redemptions')
+      .select('players.external_player_id')
+      .where('redemptions.tenant_id', '=', tenantId)
+      .where('redemptions.status', '=', status)
+      .orderBy('redemptions.created_at', 'desc')
+      .limit(100)
+      .execute();
+  }
+
+  async existsForTenant(tenantId: string, id: string): Promise<boolean> {
+    const row = await this.db
+      .selectFrom('redemptions')
+      .select('id')
+      .where('tenant_id', '=', tenantId)
+      .where('id', '=', id)
+      .executeTakeFirst();
+    return row !== undefined;
+  }
+
+  /** Conditional on MANUAL_REVIEW, so two operators resolving at once cannot both act on the coins. */
+  closeReview(
+    tx: Tx,
+    tenantId: string,
+    id: string,
+    next: { status: 'ISSUED'; externalReference: string } | { status: 'FAILED'; failureReason: string },
+  ): Promise<RedemptionRow | undefined> {
+    return tx
+      .updateTable('redemptions')
+      .set({
+        status: next.status,
+        ...(next.status === 'ISSUED'
+          ? { external_reference: next.externalReference }
+          : { failure_reason: next.failureReason }),
+        updated_at: sql`now()`,
+      })
+      .where('tenant_id', '=', tenantId)
+      .where('id', '=', id)
+      .where('status', '=', 'MANUAL_REVIEW')
+      .returningAll()
+      .executeTakeFirst();
+  }
+
   async addEvent(
     tx: Tx,
     e: { redemptionId: string; tenantId: string; from: RedemptionStatus | null; to: RedemptionStatus; detail: string },

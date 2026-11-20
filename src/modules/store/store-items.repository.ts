@@ -1,5 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpStatus, Inject, Injectable } from '@nestjs/common';
+import type { Selectable } from 'kysely';
+import { DomainError } from '../../common/domain-error';
 import { DB, type Db } from '../../db/db.provider';
+import type { StoreItemsTable } from '../../db/schema';
 import { RewardDescriptorSchema, type RewardDescriptor } from './reward-descriptor';
 
 export interface StoreItem {
@@ -10,33 +13,74 @@ export interface StoreItem {
   reward: RewardDescriptor;
 }
 
+export type ManagedStoreItem = StoreItem & { active: boolean };
+
+const COLUMNS = ['id', 'sku', 'name', 'price_coins', 'reward', 'active'] as const;
+
 @Injectable()
 export class StoreItemsRepository {
   constructor(@Inject(DB) private readonly db: Db) {}
 
   async listActive(tenantId: string): Promise<StoreItem[]> {
-    const rows = await this.baseQuery(tenantId).orderBy('price_coins').execute();
+    const rows = await this.query(tenantId).where('active', '=', true).orderBy('price_coins').execute();
     return rows.map(toItem);
   }
 
   async findActive(tenantId: string, itemId: string): Promise<StoreItem | undefined> {
-    const row = await this.baseQuery(tenantId).where('id', '=', itemId).executeTakeFirst();
+    const row = await this.query(tenantId).where('active', '=', true).where('id', '=', itemId).executeTakeFirst();
     return row && toItem(row);
   }
 
-  private baseQuery(tenantId: string) {
-    return this.db
-      .selectFrom('store_items')
-      .select(['id', 'sku', 'name', 'price_coins', 'reward'])
+  async listAll(tenantId: string): Promise<ManagedStoreItem[]> {
+    const rows = await this.query(tenantId).orderBy('price_coins').execute();
+    return rows.map(toManagedItem);
+  }
+
+  async create(
+    tenantId: string,
+    item: { sku: string; name: string; priceCoins: number; reward: RewardDescriptor },
+  ): Promise<ManagedStoreItem> {
+    const row = await this.db
+      .insertInto('store_items')
+      .values({
+        tenant_id: tenantId,
+        sku: item.sku,
+        name: item.name,
+        price_coins: item.priceCoins,
+        reward: JSON.stringify(item.reward),
+      })
+      .onConflict((oc) => oc.columns(['tenant_id', 'sku']).doNothing())
+      .returning(COLUMNS)
+      .executeTakeFirst();
+    if (!row) throw new DomainError(HttpStatus.CONFLICT, 'SKU_TAKEN', `sku "${item.sku}" already exists`);
+    return toManagedItem(row);
+  }
+
+  /** Deactivation hides an item from the store; redemptions already made keep their own snapshot. */
+  async setActive(tenantId: string, itemId: string, active: boolean): Promise<ManagedStoreItem | undefined> {
+    const row = await this.db
+      .updateTable('store_items')
+      .set({ active })
       .where('tenant_id', '=', tenantId)
-      .where('active', '=', true);
+      .where('id', '=', itemId)
+      .returning(COLUMNS)
+      .executeTakeFirst();
+    return row && toManagedItem(row);
+  }
+
+  private query(tenantId: string) {
+    return this.db.selectFrom('store_items').select(COLUMNS).where('tenant_id', '=', tenantId);
   }
 }
 
-const toItem = (row: { id: string; sku: string; name: string; price_coins: number; reward: unknown }): StoreItem => ({
+type Row = Pick<Selectable<StoreItemsTable>, (typeof COLUMNS)[number]>;
+
+const toItem = (row: Row): StoreItem => ({
   itemId: row.id,
   sku: row.sku,
   name: row.name,
   priceCoins: row.price_coins,
   reward: RewardDescriptorSchema.parse(row.reward),
 });
+
+const toManagedItem = (row: Row): ManagedStoreItem => ({ ...toItem(row), active: row.active });

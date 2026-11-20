@@ -1,7 +1,7 @@
 import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { z } from 'zod';
 import { DomainError } from '../../common/domain-error';
+import { Uuid } from '../../common/schemas';
 import { APP_CONFIG, type AppConfig } from '../../config';
 import { DB, type Db } from '../../db/db.provider';
 import { LedgerService } from '../ledger/ledger.service';
@@ -12,7 +12,6 @@ import { SpinsRepository, type PlayedSpin } from './spins.repository';
 
 export type SpinResult = PlayedSpin & { spinId: string };
 
-const SpinId = z.uuid();
 const spinNotFound = (): DomainError => new DomainError(HttpStatus.NOT_FOUND, 'SPIN_NOT_FOUND', 'spin not found');
 
 @Injectable()
@@ -28,7 +27,7 @@ export class WheelService {
 
   /** Idempotent: playing an already played spin returns its stored outcome and credits nothing. */
   async play(player: AuthenticatedPlayer, spinId: string): Promise<SpinResult> {
-    if (!SpinId.safeParse(spinId).success) throw spinNotFound();
+    if (!Uuid.safeParse(spinId).success) throw spinNotFound();
 
     const table = await this.rewardTables.getActive(player.tenantId);
     const segment = pickSegment(this.config.SPIN_SEED_SECRET, spinId, table.segments);

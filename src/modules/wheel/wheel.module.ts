@@ -10,6 +10,6 @@ import { WheelService } from './wheel.service';
   imports: [PlayersModule, LedgerModule],
   controllers: [WheelController],
   providers: [SpinsRepository, RewardTablesRepository, WheelService],
-  exports: [SpinsRepository],
+  exports: [SpinsRepository, RewardTablesRepository],
 })
 export class WheelModule {}

@@ -9,7 +9,8 @@ type NullableTimestamp = ColumnType<Date | null, Date | string | null | undefine
 /** jsonb: written as a JSON string, read as `unknown` until validated by the owning module's schema. */
 type Json = ColumnType<unknown, string, string>;
 
-export type RedemptionStatus = 'PENDING' | 'AWAITING_CONFIRMATION' | 'ISSUED' | 'FAILED' | 'MANUAL_REVIEW';
+export const REDEMPTION_STATUSES = ['PENDING', 'AWAITING_CONFIRMATION', 'ISSUED', 'FAILED', 'MANUAL_REVIEW'] as const;
+export type RedemptionStatus = (typeof REDEMPTION_STATUSES)[number];
 export type LedgerEntryKind = 'SPIN_REWARD' | 'REDEMPTION_DEBIT' | 'REDEMPTION_REFUND';
 
 export interface TenantsTable {

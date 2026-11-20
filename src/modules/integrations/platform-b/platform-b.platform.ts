@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { constantTimeEquals, hmacSha256 } from '../../../common/crypto';
-import { ExternalId } from '../../../common/external-id';
+import { CurrencyCode, ExternalId } from '../../../common/schemas';
 import type { RewardDescriptor } from '../../store/reward-descriptor';
 import type {
   CasinoPlatform,
@@ -16,7 +16,7 @@ import { requestJson, toRewardOutcome } from '../http-client';
 import { invalidEvent, unauthorizedEvent } from '../inbound-errors';
 import { minorUnitsToDecimal } from '../money';
 import { assertFresh, singleHeader } from '../signatures';
-import { CurrencyCode, PositiveDecimalAmount } from '../wire-schemas';
+import { PositiveDecimalAmount } from '../wire-schemas';
 
 /*
  * Platform B (simulated), deliberately unlike Platform A:

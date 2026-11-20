@@ -95,3 +95,21 @@ Commits are made by the developer after reviewing each phase's diff.
   - Timeout detection used `instanceof Error`; `fetch` throws a `DOMException`, which fails that check in another
     realm (surfaced under Jest). Now checked by name.
   - Two copies of Express in the tree after adding it as a direct dependency; pinned to Nest's version (deduped).
+
+## Phase 4 — tenant admin API
+
+- **Scope decision (developer).** Not a full back office: only what closes a real gap or demonstrates a design point —
+  admin-key auth scoped to the tenant, versioned reward tables, store items, deposit rule, and the exit from
+  `MANUAL_REVIEW` (without it, coins of an unresolvable delivery would stay debited forever). Tenant onboarding,
+  roles and an admin UI are documented as next steps instead.
+- **Generated.** Admin guard, controller with body validation, feature operations kept in their own modules
+  (publish in `wheel`, items in `store`, rules in `rules`, review in `redemption`), 35 tests.
+- **Verification.** Mutations, each caught: review close not conditional on `MANUAL_REVIEW`; publish without the
+  per-tenant lock; admin key of a suspended tenant accepted; rule update not scoped to the tenant (first attempt
+  did not compile — rewritten); no refund on a review decision. In Docker: a redemption driven into
+  `MANUAL_REVIEW` by the real retry schedule, then refunded by an operator; a second decision answered 409.
+- **Defects and cleanups.**
+  - A schema edit broke the `.refine` chain (stray semicolon); caught by the type check before any test ran.
+  - A scripted import rewrite aborted half-way (shell escaping inside Node); redone with an explicit file list.
+  - Duplicates removed: zod issue formatting (3 places), the currency regex (2), `z.uuid()` (4), the redemption
+    status list, and the refund posting (worker and operator now share one helper and one idempotency key).

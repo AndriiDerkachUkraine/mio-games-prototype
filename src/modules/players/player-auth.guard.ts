@@ -2,7 +2,7 @@ import { CanActivate, ExecutionContext, HttpStatus, Inject, Injectable } from '@
 import type { Request } from 'express';
 import { decode, verify, type JwtPayload } from 'jsonwebtoken';
 import { DomainError } from '../../common/domain-error';
-import { ExternalId } from '../../common/external-id';
+import { ExternalId } from '../../common/schemas';
 import { APP_CONFIG, type AppConfig } from '../../config';
 import { DB, type Db } from '../../db/db.provider';
 import { TenantsRepository } from '../tenancy/tenants.repository';

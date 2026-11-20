@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CurrencyCode } from '../../common/schemas';
 
 /** What a store item grants, in platform-agnostic terms; each casino adapter translates it to its own API. */
 export const RewardDescriptorSchema = z.discriminatedUnion('type', [
@@ -10,7 +11,7 @@ export const RewardDescriptorSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('BONUS_MONEY'),
     amountMinor: z.number().int().positive(),
-    currency: z.string().regex(/^[A-Z]{3}$/),
+    currency: CurrencyCode,
   }),
 ]);
 
