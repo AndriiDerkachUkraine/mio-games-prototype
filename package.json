@@ -44,6 +44,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "demo": "node scripts/demo.mjs"
   }
 }

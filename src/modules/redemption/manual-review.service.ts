@@ -5,7 +5,7 @@ import { Uuid } from '../../common/schemas';
 import { DB, type Db } from '../../db/db.provider';
 import type { RedemptionStatus } from '../../db/schema';
 import { LedgerService } from '../ledger/ledger.service';
-import { RewardDescriptorSchema } from '../store/reward-descriptor';
+import { toRedemptionView } from './redemption-view';
 import { RedemptionsRepository } from './redemptions.repository';
 import { refundRedemption } from './refund';
 
@@ -29,17 +29,7 @@ export class ManualReviewService {
 
   async list(tenantId: string, status: RedemptionStatus) {
     const rows = await this.redemptions.listForTenant(tenantId, status);
-    return rows.map((r) => ({
-      redemptionId: r.id,
-      externalPlayerId: r.external_player_id,
-      status: r.status,
-      priceCoins: r.price_coins,
-      reward: RewardDescriptorSchema.parse(r.reward),
-      failureReason: r.failure_reason,
-      attempts: r.attempts,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-    }));
+    return rows.map((r) => ({ ...toRedemptionView(r), externalPlayerId: r.external_player_id }));
   }
 
   async resolve(

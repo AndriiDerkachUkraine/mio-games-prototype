@@ -81,23 +81,23 @@ export function createMockCasino(options: MockCasinoOptions) {
     const mode = failures[platform].issue.shift();
     if (mode === 'error-500') return void res.status(500).json(api.errorBody('INTERNAL'));
     if (mode === 'timeout') return void answerLate(res);
+
+    // Idempotency comes before business rules: a reference that was already granted is never refused afterwards.
+    const existing = grants[platform].get(reference);
+    if (existing) return void (mode === 'lost-response' ? answerLate(res) : res.status(200).json(api.view(existing)));
     if (mode === 'reject') return void res.status(422).json(api.errorBody('NOT_ELIGIBLE'));
 
-    let grant = grants[platform].get(reference);
-    const created = !grant;
-    if (!grant) {
-      grant = {
-        id: randomUUID(),
-        reference,
-        playerId,
-        reward,
-        state: api.async ? 'QUEUED' : 'COMPLETED',
-        rejectOnCompletion: mode === 'reject-later',
-      };
-      grants[platform].set(reference, grant);
-    }
+    const grant: Grant = {
+      id: randomUUID(),
+      reference,
+      playerId,
+      reward,
+      state: api.async ? 'QUEUED' : 'COMPLETED',
+      rejectOnCompletion: mode === 'reject-later',
+    };
+    grants[platform].set(reference, grant);
     if (mode === 'lost-response') return void answerLate(res);
-    res.status(created ? (api.async ? 202 : 201) : 200).json(api.view(grant));
+    res.status(api.async ? 202 : 201).json(api.view(grant));
   }
 
   function status(platform: Platform, req: Request, res: Response, reference: string) {

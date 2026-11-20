@@ -17,7 +17,7 @@ This is the working plan the prototype was built from. It was drafted together w
 | A8    | Admin configuration                                                 | Tenant-scoped admin API: reward table versions, store items, redemption review                                                       | code                           |
 | A9    | Observability, auditability, security                               | Structured logs with correlation id; raw event store, ledger, redemption history; HMAC, JWT, hashed keys                             | code + docs                    |
 | A10   | Diagram, decisions, modules vs services                             | `docs/architecture.md`                                                                                                               | docs                           |
-| B1–B8 | End-to-end flow                                                     | E2E test per casino + `scripts/demo.sh`                                                                                              | tests                          |
+| B1–B8 | End-to-end flow                                                     | E2E test per casino + `scripts/demo.mjs`                                                                                             | tests                          |
 | B9    | Two platforms, different event schemas and reward APIs, shared core | Platform A: flat JSON, cents, synchronous issuance. Platform B: nested JSON, decimal strings, asynchronous issuance + status polling | tests                          |
 | C1    | Duplicate deposit events                                            | Unique inbound event; duplicate answered `200 {duplicate:true}`                                                                      | test                           |
 | C2    | Concurrent spin requests                                            | Conditional update on spin status; replay returns the stored outcome                                                                 | test                           |
@@ -32,7 +32,7 @@ This is the working plan the prototype was built from. It was drafted together w
 | D     | AI-native development evidence                                      | `CLAUDE.md`, `.claude/`, `docs/ai-log.md` (per-phase prompts, reviews, defects found and fixed)                                      | docs                           |
 | E1–E6 | Scaling questions                                                   | `docs/scaling.md`                                                                                                                    | docs                           |
 | E7    | First 90-day plan                                                   | `docs/90-day-plan.md`                                                                                                                | docs                           |
-| X     | Docker Compose, README, sample requests                             | `docker-compose.yml`, `README.md`, `http/`, `scripts/demo.sh`                                                                        | files                          |
+| X     | Docker Compose, README, sample requests                             | `docker-compose.yml`, `README.md`, `http/`, `scripts/demo.mjs`                                                                       | files                          |
 
 ## 2. Priorities
 
@@ -83,3 +83,11 @@ currency conversion, admin UI.
 5. **Redemption state machine:** `PENDING → (AWAITING_CONFIRMATION) → ISSUED | FAILED (+refund) | MANUAL_REVIEW`.
 6. **Platform B uses status polling** rather than callbacks: one less inbound channel to secure in the prototype.
 7. **Mock casino as a separate small app** with a control endpoint to inject failures (5xx, timeout, lost response, rejection).
+
+## 5. Status at submission
+
+| Priority | Status                                                                                                                                                                                                                       |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0       | Done: both platforms through steps 1–8, every Part C scenario with named and mutation-checked tests, compose, README, diagrams, sample requests, AI log, scaling answers, 90-day plan                                        |
+| P1       | Done: admin API (reward table versions, store items, rules, manual review), reconciliation before refunds, correlation-id logging, demo script. The separate AI review phase was folded into a review gate after every phase |
+| P2       | Not built; production approach documented in `docs/reliability-and-security.md` (known gaps) and `docs/scaling.md`                                                                                                           |

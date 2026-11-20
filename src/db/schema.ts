@@ -1,7 +1,6 @@
 import type { ColumnType, Generated, Selectable } from 'kysely';
 
-// Hand-written to mirror migrations/*.sql. bigint columns are parsed to JS numbers
-// (see db.provider.ts): coin amounts are far below Number.MAX_SAFE_INTEGER.
+// Hand-written to mirror migrations/*.sql.
 
 /** timestamptz with a DB default: optional on insert, always a Date when read. */
 type DefaultedTimestamp = ColumnType<Date, Date | string | undefined, Date | string>;

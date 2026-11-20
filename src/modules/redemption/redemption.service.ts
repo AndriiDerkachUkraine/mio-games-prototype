@@ -5,22 +5,9 @@ import { Uuid } from '../../common/schemas';
 import { DB, type Db } from '../../db/db.provider';
 import { LedgerService } from '../ledger/ledger.service';
 import type { AuthenticatedPlayer } from '../players/player-auth.guard';
-import { RewardDescriptorSchema, type RewardDescriptor } from '../store/reward-descriptor';
 import { StoreItemsRepository } from '../store/store-items.repository';
-import { RedemptionsRepository, type RedemptionRow } from './redemptions.repository';
-
-export interface RedemptionView {
-  redemptionId: string;
-  itemId: string;
-  priceCoins: number;
-  reward: RewardDescriptor;
-  status: RedemptionRow['status'];
-  externalReference: string | null;
-  failureReason: string | null;
-  attempts: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { toRedemptionView, type RedemptionView } from './redemption-view';
+import { RedemptionsRepository } from './redemptions.repository';
 
 const IdempotencyKey = z.string().regex(/^[\x21-\x7e]{1,128}$/, 'must be 1-128 printable ASCII characters');
 
@@ -70,7 +57,7 @@ export class RedemptionService {
             'this Idempotency-Key was already used for a different item',
           );
         }
-        return { redemption: toView(existing), created: false };
+        return { redemption: toRedemptionView(existing), created: false };
       }
 
       await this.ledger.post(tx, {
@@ -88,7 +75,7 @@ export class RedemptionService {
         to: 'PENDING',
         detail: `${item.priceCoins} coins debited`,
       });
-      return { redemption: toView(created), created: true };
+      return { redemption: toRedemptionView(created), created: true };
     });
   }
 
@@ -98,25 +85,12 @@ export class RedemptionService {
     if (!row) throw redemptionNotFound();
     const history = await this.redemptions.history(row.id);
     return {
-      ...toView(row),
+      ...toRedemptionView(row),
       history: history.map((h) => ({ from: h.from_status, to: h.to_status, detail: h.detail, at: h.created_at })),
     };
   }
 
   async list(player: AuthenticatedPlayer): Promise<RedemptionView[]> {
-    return (await this.redemptions.list(player)).map(toView);
+    return (await this.redemptions.list(player)).map(toRedemptionView);
   }
 }
-
-const toView = (r: RedemptionRow): RedemptionView => ({
-  redemptionId: r.id,
-  itemId: r.store_item_id,
-  priceCoins: r.price_coins,
-  reward: RewardDescriptorSchema.parse(r.reward),
-  status: r.status,
-  externalReference: r.external_reference,
-  failureReason: r.failure_reason,
-  attempts: r.attempts,
-  createdAt: r.created_at,
-  updatedAt: r.updated_at,
-});

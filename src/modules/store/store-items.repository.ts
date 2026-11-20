@@ -13,6 +13,7 @@ export interface StoreItem {
   reward: RewardDescriptor;
 }
 
+export type NewStoreItem = Omit<StoreItem, 'itemId'>;
 export type ManagedStoreItem = StoreItem & { active: boolean };
 
 const COLUMNS = ['id', 'sku', 'name', 'price_coins', 'reward', 'active'] as const;
@@ -36,10 +37,7 @@ export class StoreItemsRepository {
     return rows.map(toManagedItem);
   }
 
-  async create(
-    tenantId: string,
-    item: { sku: string; name: string; priceCoins: number; reward: RewardDescriptor },
-  ): Promise<ManagedStoreItem> {
+  async create(tenantId: string, item: NewStoreItem): Promise<ManagedStoreItem> {
     const row = await this.db
       .insertInto('store_items')
       .values({

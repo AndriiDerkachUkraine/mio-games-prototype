@@ -179,6 +179,16 @@ describe('Bonus Store and reward delivery', () => {
       expect(await casino.grants('platform-a')).toHaveLength(1);
       expect(await balance()).toBe(0);
     });
+    it('a casino that already issued answers a retry with the existing grant, never a refusal', async () => {
+      await creditCoins(ctx.app, 'casino-a', 20);
+      const item = await itemBySku('casino-a', 'free-spins-10');
+      const { body } = await redeem('casino-a', item.itemId).expect(202);
+      await casino.fail('platform-a', ['lost-response', 'reject']);
+
+      await deliverAll();
+      expect(await status('casino-a', body.redemptionId)).toMatchObject({ status: 'ISSUED', attempts: 2 });
+      expect(await balance()).toBe(0); // no refund for a reward that was delivered
+    });
   });
 
   describe('C5 — failed reward issuance', () => {

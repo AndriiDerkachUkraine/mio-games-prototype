@@ -2,7 +2,8 @@ import { Body, Controller, Get, Headers, Param, Post, Res, UseGuards } from '@ne
 import type { Response } from 'express';
 import { CurrentPlayer } from '../players/current-player.decorator';
 import { PlayerAuthGuard, type AuthenticatedPlayer } from '../players/player-auth.guard';
-import { RedemptionService, type RedemptionView } from './redemption.service';
+import type { RedemptionView } from './redemption-view';
+import { RedemptionService } from './redemption.service';
 
 @Controller('v1/me/redemptions')
 @UseGuards(PlayerAuthGuard)

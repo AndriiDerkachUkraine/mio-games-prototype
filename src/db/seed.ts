@@ -1,5 +1,5 @@
 import { sha256Hex } from '../common/crypto';
-import type { RewardDescriptor } from '../modules/store/reward-descriptor';
+import type { NewStoreItem } from '../modules/store/store-items.repository';
 import type { RewardSegment } from '../modules/wheel/reward-segments';
 import type { Db } from './db.provider';
 
@@ -34,14 +34,7 @@ export const DEFAULT_SEGMENTS: RewardSegment[] = [
   { key: 'coins-200', label: '200 coins (jackpot)', coins: 200, weight: 5 },
 ];
 
-interface SeedStoreItem {
-  sku: string;
-  name: string;
-  priceCoins: number;
-  reward: RewardDescriptor;
-}
-
-const STORE_ITEMS: Record<DevTenantId, SeedStoreItem[]> = {
+const STORE_ITEMS: Record<DevTenantId, NewStoreItem[]> = {
   'casino-a': [
     {
       sku: 'free-spins-10',

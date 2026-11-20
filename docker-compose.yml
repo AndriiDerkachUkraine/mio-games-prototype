@@ -37,6 +37,7 @@ services:
     command: ['node', 'dist/mock-casino/main.js']
     environment:
       PORT: 4100
+      MIO_URL: http://api:3100
     ports:
       - '4100:4100'
 

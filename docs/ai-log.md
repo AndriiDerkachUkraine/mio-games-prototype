@@ -1,20 +1,62 @@
-# AI-development evidence log
+# AI-development evidence log (Part D)
 
-The prototype was built with **Claude Code** as the coding agent, driven by `CLAUDE.md` (invariants, architecture
-rules, testing rules, expected workflow). The developer set direction, made the product and engineering decisions,
-and gated every phase with a review request ("re-check everything, test what you can, keep the code clean").
-Commits are made by the developer after reviewing each phase's diff.
+The prototype was built with **Claude Code** (Anthropic, Claude Opus) as the coding agent. The developer set the
+direction, made the decisions listed below, reviewed every phase and made every commit by hand after reading the
+diff. This log records what the agent did, how its output was checked, and the defects that checking found.
+
+## How AI was used
+
+| Activity             | What the agent did                                                                                                  | Evidence                          |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Plan                 | Turned the assignment PDF into a requirements matrix, priorities and phases before any code                         | [PLAN.md](PLAN.md)                |
+| Generate code        | Wrote the schema, modules, adapters, mock casino, demo script and documentation, phase by phase                     | git history: one commit per phase |
+| Create tests         | Wrote invariant-first integration tests on real PostgreSQL, concurrency tests, unit tests for pure logic            | `test/`, 230 tests                |
+| Review               | Re-read every phase as a reviewer: duplication, dead code, misleading comments, invariant violations, coverage gaps | phase sections below              |
+| Find and fix defects | Mutation checks, concurrency tests, HTTP smoke runs and clean-clone runs surfaced real bugs, fixed before commit    | "Defects" in each phase           |
+
+## Agent instructions and workflow configuration
+
+- [`CLAUDE.md`](../CLAUDE.md) — the agent's standing instructions: non-negotiable financial invariants, architecture
+  rules, testing rules, expected workflow. Two rules were added mid-project after real defects (no unnecessary row
+  locks on hot paths; mutations must compile to count).
+- [`.claude/commands/review-phase.md`](../.claude/commands/review-phase.md) — the review gate run after every
+  phase, codified as a reusable command.
+- Phase loop: plan the phase → write invariant tests first for anything that moves coins or spins → implement →
+  run scoped tests and type check → review gate → developer reads the diff and commits.
+
+## Representative prompts
+
+Translated from Ukrainian and shortened; the developer's own words, not paraphrased intent.
+
+1. _"Don't do anything yet — study the file in detail and work out what has to be done."_
+2. _"Check everything once more, in detail, set the priorities and put together an execution plan."_
+3. After every phase: _"Re-check everything, test what you can, make sure the code is clean — no duplication, no
+   unnecessary comments, comments not too long. Check everything very carefully."_
+4. On the admin API scope: _"Why not just build all of it?"_ — the agent argued for a narrower scope (below); the
+   developer agreed and deferred the rest.
+5. _"Don't commit anything yourself."_
+
+## Decisions: who proposed, who decided
+
+| Decision                                                                       | Proposed by                                         | Decided by                                                   |
+| ------------------------------------------------------------------------------ | --------------------------------------------------- | ------------------------------------------------------------ |
+| Phases, priorities (P0/P1/P2) and what to leave out                            | Agent                                               | Developer approved; asked for a review gate after each phase |
+| Modular monolith on NestJS + PostgreSQL                                        | Agent                                               | Developer                                                    |
+| Kysely + plain SQL migrations instead of an ORM                                | Agent, when asked "what is best?"                   | Developer                                                    |
+| Admin API scope: the review-queue exit plus configuration, no full back office | Agent, after the developer asked why not everything | Developer                                                    |
+| A timeout never refunds; reconcile, then manual review                         | Agent (stated in `CLAUDE.md` from phase 0)          | Developer approved                                           |
+| Separate repository and identity; commits made only by the developer           | Developer                                           | Developer                                                    |
 
 ## How the agent's output was verified
 
-| Technique                                               | What it catches                                                 | Where                          |
-| ------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------ |
-| Integration tests on real Postgres                      | Guarantees that live in the DB (unique keys, CHECKs, row locks) | `test/*.spec.ts`               |
-| Real concurrency (`Promise.all` of HTTP calls)          | Races, double credits, deadlocks                                | ingestion, wheel, ledger specs |
-| Mutation checks: break a guarantee, expect red, restore | Vacuous tests that pass whatever the code does                  | per phase, below               |
-| Coverage review of every uncovered line                 | Untested branches, dead or duplicated code                      | per phase, below               |
-| Clean-clone run (`npm ci` → build → compose → tests)    | Works-on-my-machine gaps                                        | phase 1                        |
-| HTTP smoke against the compose stack + log inspection   | Wiring, log levels, secret redaction                            | every phase                    |
+| Technique                                               | What it catches                                                       | Where                                             |
+| ------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------- |
+| Integration tests on real PostgreSQL                    | Guarantees that live in the database (unique keys, CHECKs, row locks) | `test/*.spec.ts`                                  |
+| Real concurrency (`Promise.all` of HTTP calls)          | Races, double credits, deadlocks                                      | ingestion, wheel, ledger, redemption, admin specs |
+| Mutation checks: break a guarantee, expect red, restore | Vacuous tests that pass whatever the code does                        | every phase, below                                |
+| Coverage review of every uncovered line                 | Untested branches, dead or duplicated code                            | every phase, below                                |
+| Clean-clone run (`npm ci` → build → compose → tests)    | Works-on-my-machine gaps                                              | phases 1–3 and the final check                    |
+| HTTP smoke against the compose stack + log inspection   | Wiring, log levels, secret redaction                                  | every phase                                       |
 
 ## Phase 0 — plan, skeleton, schema
 
@@ -113,3 +155,35 @@ Commits are made by the developer after reviewing each phase's diff.
   - A scripted import rewrite aborted half-way (shell escaping inside Node); redone with an explicit file list.
   - Duplicates removed: zod issue formatting (3 places), the currency regex (2), `z.uuid()` (4), the redemption
     status list, and the refund posting (worker and operator now share one helper and one idempotency key).
+
+## Phase 6 — demo, sample requests, documentation
+
+- **Generated.** A casino simulator in the mock casino (signed deposit webhooks and player tokens over plain HTTP,
+  reusing the adapters' signing code), `scripts/demo.mjs`, `http/mio.http`, API examples captured from the running
+  stack by a script, and the architecture, reliability, scaling, 90-day and README documents.
+- **Verification.** The demo doubles as a smoke test (exits non-zero on any failed check); every Mermaid diagram
+  was run through the Mermaid parser; every relative link in the docs was checked to resolve; numbers quoted in
+  the docs were recounted from the test runner.
+- **Defects found and fixed.**
+  - The simulator looked tenants up with `id in DEV_TENANTS`, so `toString` counted as a tenant; now an own-property
+    check, with a test.
+  - Docs overstated or misstated facts: "12 invalid variants" (13 by count), a "conformance kit the platforms already
+    pass" (it does not exist yet — reworded as planned work), a claim that `mio.http` runs in the VS Code REST
+    client (its response handlers are JetBrains-only), and a guessed test count.
+  - The captured API examples contained duplicated calls; deduplicated and the omission explained.
+
+## Final review before submission
+
+- **How.** A read-only duplicate scanner over 4-line windows of `src/`, `test/` and the demo (a third-party clone
+  detector could not be downloaded in this environment), a scan for exports nobody imports, a listing of every
+  comment, then every file re-read.
+- **Found and fixed.**
+  - The redemption-to-API mapping existed twice (player and admin views); now one `toRedemptionView`.
+  - The store-item input type existed twice (seed and repository); now one `NewStoreItem`.
+  - A schema comment repeated the one in `db.provider.ts`.
+  - The mock casino answered a retry with a refusal when the reward had already been granted under that
+    reference, which would make MIO refund a delivered reward. A correct casino returns the existing grant first;
+    the mock now does, and a test (red with the old order) pins it.
+- **Not changed, with reason.** Exported types used only in their own file are part of public method signatures;
+  the remaining uncovered lines are defensive branches (a guard used without its decorator, a database outage
+  during claiming).
