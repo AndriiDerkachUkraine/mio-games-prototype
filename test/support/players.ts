@@ -1,7 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { DEV_TENANTS, type DevTenantId } from '../../src/db/seed';
+import { DB, type Db } from '../../src/db/db.provider';
+import { LedgerService } from '../../src/modules/ledger/ledger.service';
 import { issuePlayerToken } from '../../src/modules/players/player-token';
+import { PlayersRepository } from '../../src/modules/players/players.repository';
 import { platformADeposit, platformBDeposit, sendPlatformA, sendPlatformB } from './webhooks';
 
 export const playerToken = (tenantId: DevTenantId, externalPlayerId = 'player-1'): string =>
@@ -35,4 +39,30 @@ export async function grantSpins(
   }
   const res = await asPlayer(app, playerToken(tenantId, externalPlayerId)).get('/v1/me/spins').expect(200);
   return res.body.available.map((s: { spinId: string }) => s.spinId);
+}
+
+/** Test setup shortcut: credits coins straight through the ledger, as a played spin would. */
+export async function creditCoins(
+  app: INestApplication,
+  tenantId: DevTenantId,
+  amount: number,
+  externalPlayerId = 'player-1',
+): Promise<void> {
+  const players = app.get(PlayersRepository);
+  const ledger = app.get(LedgerService);
+  await app
+    .get<Db>(DB)
+    .transaction()
+    .execute(async (tx) => {
+      const playerId = await players.resolve(tx, tenantId, externalPlayerId);
+      const referenceId = randomUUID();
+      await ledger.post(tx, {
+        tenantId,
+        playerId,
+        amount,
+        kind: 'SPIN_REWARD',
+        referenceId,
+        idempotencyKey: referenceId,
+      });
+    });
 }

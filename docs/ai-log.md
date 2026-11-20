@@ -74,3 +74,24 @@ Commits are made by the developer after reviewing each phase's diff.
 - **A mutation exposed a test gap:** breaking the concurrent first-contact branch of player resolution was not caught
   by the webhook race test (requests rarely hit that window). A test racing webhooks and player-API calls for a brand
   new player now catches it.
+
+## Phase 3 — Bonus Store, redemption and reward delivery
+
+- **Generated.** Reward issuance contract (`issueReward` / `rewardStatus`, one `RewardOutcome` union), shared HTTP
+  classification, outbound adapters (A synchronous, B asynchronous), the redemption job table with a leased worker,
+  a pure delivery state machine, the mock casino with failure injection, 60 tests.
+- **Developer decisions.** A timeout never triggers a refund; the casino's status endpoint is consulted before
+  giving up, and anything still unknown goes to `MANUAL_REVIEW` with the coins kept debited. The redemption row is
+  the job (no separate outbox table); HTTP calls run outside DB transactions.
+- **Verification.**
+  - Mutations, each caught: refund on an unknown outcome; no reconciliation (first attempt did not compile —
+    rewritten); no lease fencing; a new casino reference per retry (5 red); no refund on rejection; claim ignoring
+    leases; no idempotency on redeem; no crash isolation in the worker.
+  - In Docker: both casinos end to end, and a real 2 s timeout where the casino issued but the answer was lost —
+    retried with the same reference, one grant at the casino.
+- **Defects found and fixed.**
+  - The smoke script reused a player id and Idempotency-Key, so the "lost response" scenario silently replayed an
+    earlier redemption (the system behaved correctly; the check did not test what it claimed). Re-run with unique ids.
+  - Timeout detection used `instanceof Error`; `fetch` throws a `DOMException`, which fails that check in another
+    realm (surfaced under Jest). Now checked by name.
+  - Two copies of Express in the tree after adding it as a direct dependency; pinned to Nest's version (deduped).

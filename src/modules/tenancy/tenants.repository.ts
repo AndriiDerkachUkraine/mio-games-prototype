@@ -15,4 +15,9 @@ export class TenantsRepository {
       .where('status', '=', 'ACTIVE')
       .executeTakeFirst();
   }
+
+  /** Any status: rewards already paid for in coins are still delivered after a suspension. */
+  get(id: string): Promise<Tenant> {
+    return this.db.selectFrom('tenants').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
+  }
 }

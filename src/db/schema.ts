@@ -6,12 +6,8 @@ import type { ColumnType, Generated, Selectable } from 'kysely';
 /** timestamptz with a DB default: optional on insert, always a Date when read. */
 type DefaultedTimestamp = ColumnType<Date, Date | string | undefined, Date | string>;
 type NullableTimestamp = ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
-type Json<T> = ColumnType<T, string, string>;
-
-/** Internal, platform-agnostic reward descriptor. Casino adapters translate it to their API. */
-export type RewardDescriptor =
-  | { type: 'FREE_SPINS'; quantity: number; game: string }
-  | { type: 'BONUS_MONEY'; amountMinor: number; currency: string };
+/** jsonb: written as a JSON string, read as `unknown` until validated by the owning module's schema. */
+type Json = ColumnType<unknown, string, string>;
 
 export type RedemptionStatus = 'PENDING' | 'AWAITING_CONFIRMATION' | 'ISSUED' | 'FAILED' | 'MANUAL_REVIEW';
 export type LedgerEntryKind = 'SPIN_REWARD' | 'REDEMPTION_DEBIT' | 'REDEMPTION_REFUND';
@@ -45,7 +41,7 @@ export interface InboundEventsTable {
   status: 'PROCESSED' | 'IGNORED';
   ignore_reason: string | null;
   player_id: string | null;
-  payload: Json<unknown>;
+  payload: Json;
   received_at: DefaultedTimestamp;
 }
 
@@ -64,7 +60,7 @@ export interface RewardTablesTable {
   id: Generated<string>;
   tenant_id: string;
   version: number;
-  segments: Json<unknown>; // validated on read (RewardSegmentsSchema)
+  segments: Json;
   active: Generated<boolean>;
   created_by: string;
   created_at: DefaultedTimestamp;
@@ -109,7 +105,7 @@ export interface StoreItemsTable {
   sku: string;
   name: string;
   price_coins: number;
-  reward: Json<RewardDescriptor>;
+  reward: Json;
   active: Generated<boolean>;
   created_at: DefaultedTimestamp;
 }
@@ -121,7 +117,7 @@ export interface RedemptionsTable {
   store_item_id: string;
   idempotency_key: string;
   price_coins: number;
-  reward: Json<RewardDescriptor>;
+  reward: Json;
   status: Generated<RedemptionStatus>;
   external_reference: string | null;
   failure_reason: string | null;

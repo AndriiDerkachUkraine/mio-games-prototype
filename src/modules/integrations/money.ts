@@ -7,3 +7,9 @@ export function decimalToMinorUnits(amount: string): number | null {
   const [, units, fraction = ''] = match;
   return Number(units) * 100 + Number(fraction.padEnd(2, '0'));
 }
+
+/** 5050 → "50.50" (inverse of decimalToMinorUnits). */
+export function minorUnitsToDecimal(minor: number): string {
+  if (!Number.isSafeInteger(minor) || minor < 0) throw new Error(`Invalid minor amount: ${minor}`);
+  return `${Math.floor(minor / 100)}.${String(minor % 100).padStart(2, '0')}`;
+}

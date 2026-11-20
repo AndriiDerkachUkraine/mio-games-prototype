@@ -9,6 +9,8 @@ import { DbModule } from './db/db.module';
 import { HealthController } from './health.controller';
 import { IngestionModule } from './modules/ingestion/ingestion.module';
 import { LedgerModule } from './modules/ledger/ledger.module';
+import { RedemptionModule } from './modules/redemption/redemption.module';
+import { StoreModule } from './modules/store/store.module';
 import { WheelModule } from './modules/wheel/wheel.module';
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9._-]{1,128}$/;
@@ -40,6 +42,8 @@ export class AppModule {
         IngestionModule,
         WheelModule,
         LedgerModule,
+        StoreModule,
+        RedemptionModule,
       ],
       controllers: [HealthController],
       providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],

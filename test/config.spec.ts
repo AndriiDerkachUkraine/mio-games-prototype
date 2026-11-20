@@ -10,6 +10,12 @@ describe('loadConfig', () => {
       LOG_LEVEL: 'info',
       WEBHOOK_TOLERANCE_SECONDS: 300,
       PLAYER_TOKEN_MAX_AGE_SECONDS: 3600,
+      WORKER_ENABLED: true,
+      WORKER_POLL_INTERVAL_MS: 1000,
+      WORKER_LEASE_SECONDS: 30,
+      REDEMPTION_MAX_ATTEMPTS: 5,
+      RETRY_BASE_DELAY_MS: 1000,
+      RETRY_MAX_DELAY_MS: 60_000,
     });
   });
 

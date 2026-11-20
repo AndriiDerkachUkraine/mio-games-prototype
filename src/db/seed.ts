@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
+import type { RewardDescriptor } from '../modules/store/reward-descriptor';
 import type { RewardSegment } from '../modules/wheel/reward-segments';
 import type { Db } from './db.provider';
-import type { RewardDescriptor } from './schema';
 
 const sha256Hex = (value: string): string => createHash('sha256').update(value).digest('hex');
 

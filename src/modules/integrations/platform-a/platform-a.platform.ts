@@ -1,21 +1,29 @@
 import { z } from 'zod';
 import { constantTimeEquals, hmacSha256 } from '../../../common/crypto';
 import { ExternalId } from '../../../common/external-id';
+import type { RewardDescriptor } from '../../store/reward-descriptor';
 import type {
   CasinoPlatform,
   DepositStatus,
   FreshnessPolicy,
   InboundParseResult,
   InboundRequest,
+  RewardApi,
+  RewardOutcome,
+  RewardRequest,
 } from '../casino-platform';
+import { requestJson, toRewardOutcome } from '../http-client';
 import { invalidEvent, unauthorizedEvent } from '../inbound-errors';
 import { assertFresh, singleHeader } from '../signatures';
 import { CurrencyCode } from '../wire-schemas';
 
 /*
  * Platform A (simulated):
- *   X-Timestamp: <unix s>, X-Signature: sha256=<hex HMAC(secret, "<timestamp>.<raw body>")>
- *   { event_id, event_type: "deposit", player_id, amount_cents, currency, status: SUCCESS|FAILED|PENDING }
+ *   webhook:  X-Timestamp: <unix s>, X-Signature: sha256=<hex HMAC(secret, "<timestamp>.<raw body>")>
+ *             { event_id, event_type: "deposit", player_id, amount_cents, currency, status: SUCCESS|FAILED|PENDING }
+ *   rewards:  synchronous, Authorization: Bearer <key>
+ *             POST /bonuses { reference, player_id, bonus } → { bonus_id, status: "granted" }
+ *             GET  /bonuses/by-reference/:reference → same, or 404
  */
 
 const SIGNATURE_HEADER = 'x-signature';
@@ -36,6 +44,18 @@ const STATUS: Record<z.infer<typeof DepositSchema>['status'], DepositStatus> = {
   FAILED: 'FAILED',
   PENDING: 'PENDING',
 };
+
+const GrantedSchema = z.object({ bonus_id: z.string().min(1), status: z.literal('granted') });
+
+const issued = (body: z.infer<typeof GrantedSchema>): RewardOutcome => ({
+  kind: 'ISSUED',
+  externalReference: body.bonus_id,
+});
+
+const toBonus = (reward: RewardDescriptor) =>
+  reward.type === 'FREE_SPINS'
+    ? { type: 'free_spins', count: reward.quantity, game: reward.game }
+    : { type: 'cash', amount_cents: reward.amountMinor, currency: reward.currency };
 
 const signature = (secret: string, timestamp: string, rawBody: string): string =>
   `sha256=${hmacSha256(secret, `${timestamp}.${rawBody}`).toString('hex')}`;
@@ -79,5 +99,27 @@ export class PlatformA implements CasinoPlatform {
         status: STATUS[d.status],
       },
     };
+  }
+
+  async issueReward(api: RewardApi, request: RewardRequest): Promise<RewardOutcome> {
+    const result = await requestJson(
+      `${api.baseUrl}/bonuses`,
+      {
+        method: 'POST',
+        headers: { authorization: `Bearer ${api.apiKey}` },
+        body: { reference: request.reference, player_id: request.externalPlayerId, bonus: toBonus(request.reward) },
+      },
+      api.timeoutMs,
+    );
+    return toRewardOutcome(result, GrantedSchema, issued);
+  }
+
+  async rewardStatus(api: RewardApi, reference: string): Promise<RewardOutcome> {
+    const result = await requestJson(
+      `${api.baseUrl}/bonuses/by-reference/${encodeURIComponent(reference)}`,
+      { method: 'GET', headers: { authorization: `Bearer ${api.apiKey}` } },
+      api.timeoutMs,
+    );
+    return toRewardOutcome(result, GrantedSchema, issued, { notFoundOn404: true });
   }
 }

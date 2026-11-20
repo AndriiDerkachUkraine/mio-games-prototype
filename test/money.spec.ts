@@ -1,4 +1,4 @@
-import { decimalToMinorUnits } from '../src/modules/integrations/money';
+import { decimalToMinorUnits, minorUnitsToDecimal } from '../src/modules/integrations/money';
 
 describe('decimalToMinorUnits', () => {
   it.each([
@@ -18,4 +18,23 @@ describe('decimalToMinorUnits', () => {
       expect(decimalToMinorUnits(input)).toBeNull();
     },
   );
+});
+
+describe('minorUnitsToDecimal', () => {
+  it.each([
+    [0, '0.00'],
+    [5, '0.05'],
+    [500, '5.00'],
+    [5050, '50.50'],
+  ])('%d → %s', (input, expected) => {
+    expect(minorUnitsToDecimal(input)).toBe(expected);
+  });
+
+  it('round-trips with decimalToMinorUnits', () => {
+    for (const minor of [1, 99, 100, 123456]) expect(decimalToMinorUnits(minorUnitsToDecimal(minor))).toBe(minor);
+  });
+
+  it.each([-1, 1.5, Number.MAX_SAFE_INTEGER + 1])('rejects %p', (input) => {
+    expect(() => minorUnitsToDecimal(input)).toThrow(/Invalid minor amount/);
+  });
 });

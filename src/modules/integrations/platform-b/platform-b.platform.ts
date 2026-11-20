@@ -1,22 +1,32 @@
 import { z } from 'zod';
 import { constantTimeEquals, hmacSha256 } from '../../../common/crypto';
 import { ExternalId } from '../../../common/external-id';
+import type { RewardDescriptor } from '../../store/reward-descriptor';
 import type {
   CasinoPlatform,
   DepositStatus,
   FreshnessPolicy,
   InboundParseResult,
   InboundRequest,
+  RewardApi,
+  RewardOutcome,
+  RewardRequest,
 } from '../casino-platform';
+import { requestJson, toRewardOutcome } from '../http-client';
 import { invalidEvent, unauthorizedEvent } from '../inbound-errors';
+import { minorUnitsToDecimal } from '../money';
 import { assertFresh, singleHeader } from '../signatures';
 import { CurrencyCode, PositiveDecimalAmount } from '../wire-schemas';
 
 /*
  * Platform B (simulated), deliberately unlike Platform A:
- *   X-PB-Signature: <base64 HMAC(secret, raw body)>; the timestamp travels inside the signed body
- *   { notificationId, timestamp, type: "PAYMENT", data: { operation: "DEPOSIT", amount: "50.00",
- *     currency, customer: { ref }, state: 1 pending | 2 approved | 3 declined } }
+ *   webhook:  X-PB-Signature: <base64 HMAC(secret, raw body)>; the timestamp travels inside the signed body
+ *             { notificationId, timestamp, type: "PAYMENT", data: { operation: "DEPOSIT", amount: "50.00",
+ *               currency, customer: { ref }, state: 1 pending | 2 approved | 3 declined } }
+ *   rewards:  asynchronous, X-Api-Key: <key>
+ *             POST /v2/reward-orders { clientOrderId, customerRef, reward }
+ *               → { orderId, state: QUEUED|COMPLETED|REJECTED }
+ *             GET  /v2/reward-orders?clientOrderId=… → same, or 404
  */
 
 const SIGNATURE_HEADER = 'x-pb-signature';
@@ -41,6 +51,23 @@ const DepositSchema = EnvelopeSchema.extend({
 });
 
 const STATE: Record<1 | 2 | 3, DepositStatus> = { 1: 'PENDING', 2: 'SUCCEEDED', 3: 'FAILED' };
+
+const OrderSchema = z.object({
+  orderId: z.string().min(1),
+  state: z.enum(['QUEUED', 'COMPLETED', 'REJECTED']),
+  reason: z.string().optional(),
+});
+
+const fromOrder = (order: z.infer<typeof OrderSchema>): RewardOutcome => {
+  if (order.state === 'COMPLETED') return { kind: 'ISSUED', externalReference: order.orderId };
+  if (order.state === 'REJECTED') return { kind: 'REJECTED', reason: order.reason ?? 'rejected by casino' };
+  return { kind: 'PENDING', externalReference: order.orderId };
+};
+
+const toReward = (reward: RewardDescriptor) =>
+  reward.type === 'FREE_SPINS'
+    ? { kind: 'FREE_SPINS', quantity: reward.quantity, gameCode: reward.game }
+    : { kind: 'CASH_BONUS', value: minorUnitsToDecimal(reward.amountMinor), currency: reward.currency };
 
 const signature = (secret: string, rawBody: string): string => hmacSha256(secret, rawBody).toString('base64');
 
@@ -84,5 +111,31 @@ export class PlatformB implements CasinoPlatform {
         status: STATE[d.state],
       },
     };
+  }
+
+  async issueReward(api: RewardApi, request: RewardRequest): Promise<RewardOutcome> {
+    const result = await requestJson(
+      `${api.baseUrl}/v2/reward-orders`,
+      {
+        method: 'POST',
+        headers: { 'x-api-key': api.apiKey },
+        body: {
+          clientOrderId: request.reference,
+          customerRef: request.externalPlayerId,
+          reward: toReward(request.reward),
+        },
+      },
+      api.timeoutMs,
+    );
+    return toRewardOutcome(result, OrderSchema, fromOrder);
+  }
+
+  async rewardStatus(api: RewardApi, reference: string): Promise<RewardOutcome> {
+    const result = await requestJson(
+      `${api.baseUrl}/v2/reward-orders?clientOrderId=${encodeURIComponent(reference)}`,
+      { method: 'GET', headers: { 'x-api-key': api.apiKey } },
+      api.timeoutMs,
+    );
+    return toRewardOutcome(result, OrderSchema, fromOrder, { notFoundOn404: true });
   }
 }

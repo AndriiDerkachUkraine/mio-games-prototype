@@ -32,6 +32,14 @@ services:
         condition: service_healthy
     restart: 'no'
 
+  mock-casino:
+    <<: *app
+    command: ['node', 'dist/mock-casino/main.js']
+    environment:
+      PORT: 4100
+    ports:
+      - '4100:4100'
+
   api:
     <<: *app
     environment:
@@ -44,6 +52,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      mock-casino:
+        condition: service_started
 
 volumes:
   pgdata:
