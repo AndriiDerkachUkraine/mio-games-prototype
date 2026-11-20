@@ -20,8 +20,9 @@ content-type: application/json
 }
 ```
 
+Response `200`:
+
 ```json
-// 200
 {
   "sent": {
     "event_id": "1726d47e-1fdd-4233-9ef3-cf08ed1f179f",
@@ -53,8 +54,9 @@ content-type: application/json
 }
 ```
 
+Response `200`:
+
 ```json
-// 200
 {
   "token": "eyJhbGciOiJIUzI1NiIs…"
 }
@@ -67,8 +69,9 @@ GET http://localhost:3100/v1/me/spins
 authorization: Bearer <token>
 ```
 
+Response `200`:
+
 ```json
-// 200
 {
   "available": [
     {
@@ -90,8 +93,9 @@ POST http://localhost:3100/v1/me/spins/5790fa2f-4675-4645-bb1c-49af662eebe4/play
 authorization: Bearer <token>
 ```
 
+Response `200`:
+
 ```json
-// 200
 {
   "spinId": "5790fa2f-4675-4645-bb1c-49af662eebe4",
   "segment": {
@@ -111,8 +115,9 @@ GET http://localhost:3100/v1/me/wallet
 authorization: Bearer <token>
 ```
 
+Response `200`:
+
 ```json
-// 200
 {
   "balance": 35,
   "entries": [
@@ -141,8 +146,9 @@ GET http://localhost:3100/v1/store/items
 authorization: Bearer <token>
 ```
 
+Response `200`:
+
 ```json
-// 200
 {
   "items": [
     {
@@ -184,8 +190,9 @@ content-type: application/json
 }
 ```
 
+Response `202`:
+
 ```json
-// 202
 {
   "redemptionId": "20339a46-159b-43f8-ac3e-0dcde0173322",
   "itemId": "2ce906f8-1c2a-4774-8ec0-808d266519de",
@@ -217,8 +224,9 @@ content-type: application/json
 }
 ```
 
+Response `200`:
+
 ```json
-// 200
 {
   "redemptionId": "20339a46-159b-43f8-ac3e-0dcde0173322",
   "itemId": "2ce906f8-1c2a-4774-8ec0-808d266519de",
@@ -244,8 +252,9 @@ GET http://localhost:3100/v1/me/redemptions/20339a46-159b-43f8-ac3e-0dcde0173322
 authorization: Bearer <token>
 ```
 
+Response `200`:
+
 ```json
-// 200
 {
   "redemptionId": "20339a46-159b-43f8-ac3e-0dcde0173322",
   "itemId": "2ce906f8-1c2a-4774-8ec0-808d266519de",
@@ -296,8 +305,9 @@ content-type: application/json
 }
 ```
 
+Response `401`:
+
 ```json
-// 401
 {
   "error": "UNAUTHORIZED_EVENT",
   "message": "invalid signature"
@@ -310,8 +320,9 @@ content-type: application/json
 GET http://localhost:3100/v1/me/wallet
 ```
 
+Response `401`:
+
 ```json
-// 401
 {
   "error": "UNAUTHORIZED_PLAYER",
   "message": "missing bearer token"
@@ -325,8 +336,9 @@ GET http://localhost:3100/v1/admin/reward-tables
 x-admin-key: dev-casino-b-admin-key
 ```
 
+Response `200`:
+
 ```json
-// 200
 {
   "versions": [
     {
@@ -373,8 +385,9 @@ GET http://localhost:3100/v1/admin/redemptions?status=MANUAL_REVIEW
 x-admin-key: dev-casino-a-admin-key
 ```
 
+Response `200`:
+
 ```json
-// 200
 {
   "redemptions": []
 }
