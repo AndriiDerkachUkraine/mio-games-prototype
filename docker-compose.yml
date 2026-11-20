@@ -1,0 +1,48 @@
+# One image, two roles: a one-shot `migrate` job and the long-running `api`.
+x-app: &app
+  build: .
+  image: miogames-prototype:local
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: mio
+      POSTGRES_PASSWORD: mio
+      POSTGRES_DB: mio
+    ports:
+      - '5433:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U mio -d mio']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    <<: *app
+    command: ['node', 'dist/db/migrate.js', '--seed']
+    environment:
+      DATABASE_URL: postgres://mio:mio@postgres:5432/mio
+      MOCK_CASINO_URL: http://mock-casino:4100
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    <<: *app
+    environment:
+      PORT: 3100
+      DATABASE_URL: postgres://mio:mio@postgres:5432/mio
+      LOG_LEVEL: info
+    ports:
+      - '3100:3100'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
